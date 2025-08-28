@@ -11,26 +11,43 @@ const logger = require('./utils/logger');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Security middleware
+// =================== SECURITY =================== //
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'], // React dev servers
+  origin: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:3000', 'http://localhost:5173', /\.onrender\.com$/],
   credentials: true
 }));
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP
   message: {
     error: 'Too many requests from this IP, please try again later.'
   }
 });
 app.use('/api/', limiter);
 
-// Body parsing middleware
+// =================== MIDDLEWARE =================== //
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// =================== ROUTES =================== //
+
+// Homepage route
+app.get("/", (req, res) => {
+  res.send(`
+    <h1>🚀 Mail Service is Live!</h1>
+    <p>Available endpoints:</p>
+    <ul>
+      <li><a href="/health">/health</a> → Service health check</li>
+      <li><a href="/docs">/docs</a> → API Documentation</li>
+      <li>/api → Mail service routes</li>
+    </ul>
+  `);
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -38,6 +55,19 @@ app.get('/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     service: 'Mail Service'
+  });
+});
+
+// Docs endpoint
+app.get('/docs', (req, res) => {
+  res.json({
+    service: "Mail Service API",
+    endpoints: {
+      "/": "Homepage (HTML)",
+      "/health": "Health check",
+      "/docs": "API documentation (this route)",
+      "/api": "Mail service routes"
+    }
   });
 });
 
@@ -55,10 +85,9 @@ app.use('*', (req, res) => {
   });
 });
 
-// Start server
+// =================== START SERVER =================== //
 app.listen(PORT, () => {
   logger.info(`Mail service running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
   console.log("✅ EMAIL_USER:", process.env.EMAIL_USER);
-
 });
