@@ -11,12 +11,10 @@ const logger = require('./utils/logger');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// =================== SECURITY =================== //
+// Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://localhost:5173', /\.onrender\.com$/],
+  origin: ['http://localhost:3000', 'http://localhost:5173'], // React dev servers
   credentials: true
 }));
 
@@ -24,32 +22,15 @@ app.use(cors({
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP
-  message: {
-    error: 'Too many requests from this IP, please try again later.'
-  }
+  message: { error: 'Too many requests, please try again later.' }
 });
 app.use('/api/', limiter);
 
-// =================== MIDDLEWARE =================== //
+// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// =================== ROUTES =================== //
-
-// Homepage route
-app.get("/", (req, res) => {
-  res.send(`
-    <h1>🚀 Mail Service is Live!</h1>
-    <p>Available endpoints:</p>
-    <ul>
-      <li><a href="/health">/health</a> → Service health check</li>
-      <li><a href="/docs">/docs</a> → API Documentation</li>
-      <li>/api → Mail service routes</li>
-    </ul>
-  `);
-});
-
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
@@ -58,23 +39,15 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Docs endpoint
-app.get('/docs', (req, res) => {
-  res.json({
-    service: "Mail Service API",
-    endpoints: {
-      "/": "Homepage (HTML)",
-      "/health": "Health check",
-      "/docs": "API documentation (this route)",
-      "/api": "Mail service routes"
-    }
-  });
+// Root route (so Render homepage works)
+app.get('/', (req, res) => {
+  res.send('🚀 Mail Service is Live!');
 });
 
 // Mail routes
 app.use('/api', mailController);
 
-// Error handling middleware
+// Error handling
 app.use(errorHandler);
 
 // 404 handler
@@ -85,7 +58,7 @@ app.use('*', (req, res) => {
   });
 });
 
-// =================== START SERVER =================== //
+// Start server
 app.listen(PORT, () => {
   logger.info(`Mail service running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
