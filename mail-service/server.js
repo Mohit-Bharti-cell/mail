@@ -9,12 +9,12 @@ const errorHandler = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001
 
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'https://react-ai-frontend.vercel.app'], // React dev servers
+  origin: "*", // React dev servers
   credentials: true
 }));
 
